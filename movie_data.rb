@@ -1,6 +1,20 @@
 require './movie_test'
 
+##
+# MovieData class
+
 class MovieData
+
+    ##
+    # Constructor for class MovieData. Its arguments has two options:
+    #
+    # z = MovieData.new("ml-100k")
+    #
+    # will read it all of the data in the 100,000 lines in “u.data” as the training set and will have an empty test set;
+    #
+    # z = MovieData.new('ml-100k',:u1)
+    #
+    # will read in the 80,000 lines in “u1.base” as the training set and the 20,000 lines in “u1.test” as the test set.
 
     def initialize(*args)
         if args.size < 1 || args.size > 2
@@ -8,9 +22,9 @@ class MovieData
         else
             @dict_mid = Hash.new
             @dict_uid = Hash.new
+            @test_list = Array.new
             @count = 0
             if args.size == 2
-                @test_list = Array.new
                 filename = args[0] + '/' + args[1].to_s + '.base'
                 test_filename = args[0] + '/' + args[1].to_s + '.test'
                 load_data(filename, 80000)
@@ -22,6 +36,9 @@ class MovieData
         end
     end
 
+    ##
+    # Read in the max_line_num lines in "filename" as the test set.
+
     def load_test(filename, max_line_num)
         File.foreach(filename).with_index do |line, i|
             break if i >= max_line_num
@@ -29,6 +46,9 @@ class MovieData
             @test_list.push([user_id, movie_id, rating, timestamp])
         end
     end
+
+    ##
+    # Read in the max_line_num lines in "filename" as the training set.
 
     def load_data(filename, max_line_num)
         File.foreach(filename).with_index do |line, i|
@@ -42,6 +62,11 @@ class MovieData
         end
     end
 
+    ##
+    # Runs the predict method on the first k ratings in the test set and returns a MovieTest object containing the results.
+    #
+    # The parameter k is optional and if omitted, all of the tests will be run.
+
     def run_test(*args)
         if args.size > 1
             puts 'Wrong arguments'
@@ -49,15 +74,22 @@ class MovieData
             array = @test_list if args.size == 0
             array = @test_list.first(args[0]) if args.size == 1
             result = Array.new
-            array.each do |user_id, movie_id, rating, timestamp|
+            array.each do |user_id, movie_id, rating, _|
                 result.push([user_id, movie_id, rating.to_i, predict(user_id, movie_id)])
             end
             test = MovieTest.new(result)
             print 'Average predication error: ', test.mean, "\n"
             print 'Standard deviation of error: ', test.stddev, "\n"
             print 'Root mean square error:', test.rms, "\n"
+            pred_array = test.to_a
+            pred_array.each do |u, m, r, p|
+                print "user_id: ", u, "\tmovie_id: ", m, "\treal rating: ", r, "\tpredict rating: ", p, "\n"
+            end
         end
     end
+
+    ##
+    # Returns a floating point number between 1.0 and 5.0 as an estimate of what user user_id would rate movie movie_id.
 
     def predict(user_id, movie_id)
         sampling_ratio = 0.2
@@ -74,6 +106,9 @@ class MovieData
         return sum / sample_num
     end
 
+    ##
+    # Returns the rating that user user_id gave movie movie_id in the training set, and 0 if user user_id did not rate movie movie_id.
+
     def rating(user_id, movie_id)
         if @dict_uid.has_key?(user_id)
             user_hash = @dict_uid[user_id]
@@ -82,15 +117,22 @@ class MovieData
         return 0
     end
 
+    ##
+    # Returns the array of movies that user user_id has watched.
+
     def movies(user_id)
         return @dict_uid[user_id].keys if @dict_uid.has_key?(user_id)
-        ret = []
     end
+
+    ##
+    # Returns the array of users that have seen movie movie_id.
 
     def viewers(movie_id)
         return @dict_mid[movie_id].keys if @dict_mid.has_key?(movie_id)
-        ret = []
     end
+
+    ##
+    # Returns a number that indicates the popularity of movie movie_id (higher numbers are more popular).
 
     def popularity(movie_id)
         return @dict_mid[movie_id].size() / @count
@@ -98,12 +140,16 @@ class MovieData
 
     def popularity_list()
         ret = Array.new
-        temp = @dict_mid.sort_by {|movie_id, array| array.size()}.reverse
-        temp.each do |movie_id, array|
+        temp = @dict_mid.sort_by {|_, array| array.size()}.reverse
+        temp.each do |movie_id, _|
             ret.push(movie_id)
         end
         return ret
     end
+
+    ##
+    # Returns a floating point number between 0 and 1.0 as the similarity in movie preference between user1 and user2, 
+    # where higher numbers indicate greater similarity.
 
     def similarity(user1, user2)
         user1_hash = @dict_uid[user1]
@@ -116,6 +162,9 @@ class MovieData
         end
         return dividend / [user1_hash.size(), user2_hash.size()].min
     end
+
+    ##
+    # Returns a list of users whose tastes are most similar to the tastes of user u
 
     def most_similar(u)
         t_max = -1
@@ -136,12 +185,5 @@ class MovieData
 end
 
 movie_data = MovieData.new('ml-100k', :u1)
-#array = thing.popularity_list()
-
-#print 'First ten elements of popularity_list: ', array[0..9], "\n"
-
-#print 'Last ten elements of popularity_list: ', array[-10..-1], "\n"
-
-#print 'most_similar(1) ', thing.most_similar('1'), "\n"
 
 movie_data.run_test(5000)
