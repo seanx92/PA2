@@ -74,9 +74,11 @@ class MovieData
             array = @test_list if args.size == 0
             array = @test_list.first(args[0]) if args.size == 1
             result = Array.new
+            puts "Time before predicting: #{Time.now}"
             array.each do |user_id, movie_id, rating, _|
                 result.push([user_id, movie_id, rating.to_i, predict(user_id, movie_id)])
             end
+            puts "Time after predicting: #{Time.now}"
             test = MovieTest.new(result)
             print 'Average predication error: ', test.mean, "\n"
             print 'Standard deviation of error: ', test.stddev, "\n"
@@ -122,6 +124,7 @@ class MovieData
 
     def movies(user_id)
         return @dict_uid[user_id].keys if @dict_uid.has_key?(user_id)
+        ret = []
     end
 
     ##
@@ -129,6 +132,7 @@ class MovieData
 
     def viewers(movie_id)
         return @dict_mid[movie_id].keys if @dict_mid.has_key?(movie_id)
+        ret = []
     end
 
     ##
